@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Let's code a simple receiver in C!</title>
+
+		<meta name="description" content="SDRA-2017 Presentation on OpenWebRX">
+		<meta name="author" content="András Retzler">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/white.css" id="theme">
+        <link rel="stylesheet" href="lib/css/powerline.css">
+        <link rel="stylesheet" href="lib/css/asciinema-player.css">
+        <link rel="stylesheet" href="lib/powerline-web-fonts/PowerlineFonts.css">
+        <script src="lib/js/asciinema-player.js"></script>
+		<link rel="stylesheet" href="lib/font/dejavusansmono_book_macroman/stylesheet.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+		<style>
+		 .reveal section img.noborder {
+			border:none;
+			background: none;
+			box-shadow: none;
+		}
+		.reveal .slides section .fragment.fade-in-reldown { opacity: 0; visibility: hidden; top: -100px; relative: relative; }
+		.reveal .slides section .fragment.fade-in-reldown.visible { opacity: 1; visibility: visible; top: 0px; position: relative; }
+		.reveal .slides section .fragment.fade-in-up { opacity: 0; visibility: hidden; top: 100px; position: absolute; }
+		.reveal .slides section .fragment.fade-in-up.visible { opacity: 1; visibility: visible; top: 0px; position: absolute; }
+		.above-each-other {  width: 80%; position: absolute; top:0; left: 95px; }
+		.80p { width: 805; }
+		.reveal .slides section .fragment.go-right { position: relative; left: -100px; visibility: visible; opacity: 1;}
+		.reveal .slides section .fragment.go-right.visible { position: relative; left: 0px; }
+		.reveal .slides section .fragment.go-left { position: relative; left: 255px; visibility: visible; opacity: 1;}
+		.reveal .slides section .fragment.go-left.visible { position: relative; left: 0px; }
+		.code-above-each-other { width: 100%; position: absolute; top: 0px; left: 0px; }
+		.code-above-each-other pre { width: 100%; }
+		p.license-reference { color: #aaa; font-size: 12pt; }
+		.license-reference a { color: #888; }
+
+		.reveal pre { font-family: dejavu_sans_monobook; }
+		.reveal code { font-family: dejavu_sans_monobook; }
+
+		.reveal a { color: #184796; }
+        
+		.reveal .slides section .fragment.move-right-0 { visibility: visible; opacity: 1;  top: -200px; left: 0px; position: absolute; }
+		.reveal .slides section .fragment.move-right-0.visible {visibility: visible; opacity: 1;  left: -1300px; position: absolute; }
+        /*.reveal .slides section .fragment.move-right-1 { visibility: visible; opacity: 1;  left: 0px; position: absolute; }
+		.reveal .slides section .fragment.move-right-1.visible { visibility: visible; opacity: 1; left: -1300px; position: absolute; }*/
+    </style>
+
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides" >
+				<section data-background="bgtest1notree.jpg">
+					<img src="fr4/title.png" class="noborder" style="width: 110%; position: relative; top: 20px;">
+                    <aside class="notes">
+                        In this talk we are going to write an AM/FM/SSB receiver in the C programming language.
+                        How many people here have written code in the C programming language?
+                        How many people have any experience with Linux here?
+                        I noticed that most hams like hardware more than software. 
+                        An important goal of my work on OpenWebRX and the CSDR DSP library, and also with this talk is to create educational software about the basics of Software Radio. Real DIY: no GNU Radio, no LabVIEW, no SDR# involved.
+                    </aside>
+				</section>
+				<!--<section data-background="bgtest1notree.jpg">
+                    <h2>András Retzler, HA7ILM</h2> 
+                    <h2>Zsolt Krüpl, HG2ECZ</h2> 
+                    <h2>Ádám Kiss, HA8KDA</h2> 
+                    <aside class="notes">
+                    </aside>
+                </section>-->
+				<section style="width: 114%; left: -7%;">
+                    <h2>SMALLRX</h2>
+                    <div class="fragment grow">
+                        <a href="http://github.com/ha7ilm/smallrx">http://github.com/ha7ilm/smallrx</a>
+                    </div>
+                    <aside class="notes">
+                        What we're going to write today is an AM/FM/SSB receiver.
+                        The name of the project is smallrx and it can be found on GitHub.
+                        When I started this project, I've challenged myself with writing the shortest ham receiver in C that's still readable.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg" style="width: 114%; left: -7%;">
+                    <!--<img src="fr4/smallrx-paper.png" class="noborder" style="width: 80%;"/>-->
+                    <img src="fr4/smallrx-paper-2.png" class="noborder" style="width: 90%; position: relative; top: -30px;"/>
+                    <aside class="notes">
+                        It's around 135 lines right now, but the code is still less than 100 lines.
+                        It can be printed on a single sheet of paper, on two pages.
+                        It's important to note that it's not something optimized for speed. It's optimized to understand the concepts.
+                    </aside>
+				</section>
+				<section style="width: 114%; left: -7%;">
+                    <img src="fr4/signalflow.png" class="noborder" style="width: 25%; position: relative; top: -30px;"/>
+                    <aside class="notes">
+                        So this is the dataflow that this program implements.
+                        We shift the signal to the center of the spectrum, we run a decimating FIR filter to select the single channel corresponding to the signal of interest, and then we demodulate. 
+                        This works and allow you to listen to various transmissions.
+                        There is one thing remaining, and that's homework for you: the automatic gain control. 
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/1.json" speed="3" font-size="23px" id="rec1"/>
+                    </div>
+                    <div class="fragment" data-rec="rec1" data-time="4" />
+                    <div class="fragment" data-rec="rec1" data-time="32" />
+                    <div class="fragment" data-rec="rec1" data-time="44" />
+                    <div class="fragment" data-rec="rec1" data-time="76" />
+                    <div class="fragment" data-rec="rec1" data-time="93" />
+                    <aside class="notes">
+                        So let's jump straight into this. (`vim smallrx.c`)
+                        Let's include a lot of stuff.
+                        This is a program that will have three parameters: (although we don't use them yet).
+                        We write a while loop that reads complex unsigned 8-bit samples from the standard input.
+                        It reads the real part and the imaginary part, and converts those to floating point.
+                        (What does complex mean? It means that the left side of the spectrum is not the mirror of the right. 
+                        There are different signals at the negative frequencies.)
+                        So how will this work?
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <img src="fr4/smallrx-how-it-works.png" class="noborder"/>
+<pre  class="fragment fade-up"><code>$ rtl_sdr -f 145300000 - | ./rx 145300000 145325000 f | \
+    mplayer -cache 1024 -quiet -rawaudio \
+    samplesize=2:channels=1:rate=48000 -demuxer rawaudio -</code></pre>
+                    <aside class="notes">
+                        Here is the RTL-SDR, which gives you a baseband signal that represents the whole 2.4 MHz bandwidth.
+                        So then we pipe it into our program, which reads I Q I Q I Q...
+                        And does something on the signal, then outputs 48 ksps audio.
+                        That we can pipe into mplayer.
+                        So this is the command we can use for that.
+                        So now that we understand where do we want to go, we know that we just need to write this small part.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/2.json" speed="1" cols="80" font-size="20px" id="rec2"/>
+                    </div>
+                    <div class="fragment" data-rec="rec2" data-time="3" />
+                    <div class="fragment" data-rec="rec2" data-time="6" />
+                    <div class="fragment" data-rec="rec2" data-time="19" />
+                    <aside class="notes">
+                        What it gives is I Q I Q I Q...
+                    </aside>
+				</section>
+				<section>
+                    <div style="position: relative; top: -70px;">
+                    <iframe src="lib/mathbox/examples/test/sine.html" width="1000" height="800"></iframe>
+                    </div>
+                    <aside class="notes">
+                        So what is this I Q I Q? These are complex numbers. Here we see a complex sine.
+                    </aside>
+				</section>
+				<section>
+                    <div style="position: relative; top: -70px;">
+                    <iframe src="lib/mathbox/examples/test/rx-noise.html" width="1000" height="800"></iframe>
+                    </div>
+                    <aside class="notes">
+                        This is what noise looks like.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/3.json" speed="1" cols="80" font-size="20px" id="rec3"/>
+                    </div>
+                    <div class="fragment" data-rec="rec3" data-time="5" />
+                    <div class="fragment" data-rec="rec3" data-time="17" />
+                    <div class="fragment" data-rec="rec3" data-time="67" />
+                    <div class="fragment" data-rec="rec3" data-time="77" />
+                    <aside class="notes">
+                        So we load the I sample and the Q sample.
+                        Then we convert them to floating point.
+                    </aside>
+				</section>
+				<section >
+                    <h1>Let's<br /> shift!</h1>
+                    <aside class="notes">
+                        Let's do the frequency translation next. 
+                    </aside>
+				</section>
+				<section >
+                    <img src="fr4/signalflow-shift.png" class="noborder" style="width: 70%" />
+                    <aside class="notes">
+                        We want to shift out signal of interest to the center of the spectrum. 
+                    </aside>
+				</section>
+				<section  data-transition="fade-in">
+                    <img src="fr4/shift-how-1.png" class="noborder" style="width: 70%" />
+                    <aside class="notes">
+                        Just like in hardware where we can do so using an LO and a mixer, 
+                        we can do the same in software. 
+                    </aside>
+				</section>
+				<section  data-transition="fade-in">
+                    <img src="fr4/shift-how-2.png" class="noborder" style="width: 70%" />
+                    <aside class="notes">
+                        So let's see what happens if we have a single sine wave as our input signal!
+                        At the LO, there we have our complex sine too, the frequency of which corresponds to the shift rate.
+                        Note that the spiral rotates in the other direction here.
+                        And there is the shifted signal, which is the result after mixing these two.
+                        In DSP, this means multiplying together.
+                    </aside>
+				</section>
+				<section  data-transition="fade-in">
+                    <img src="fr4/shift-how-3.png" class="noborder" style="width: 70%" />
+                    <aside class="notes">So why does this work? It basically works because by multiplying these together, we rotate our input signal back by the phase of our LO. Thus the result will be the phase rotating in the other direction </aside>
+				</section>
+                <!--<section >
+                    <div class="fragment fade-in" data-iframe="anim3" data-url="anims/shift-rotate-2/shift-rotate.html" style="position: relative; top: -50px; left: -150px;">
+                        <iframe src="about:blank" id="anim3" width="1400" height="1000"></iframe>
+                    </div>
+                    <aside class="notes">
+                        What happens if we do it from sample to sample?
+                        The red is the input, the blue is the LO, and the green is the LO. 
+                        This only applies when the input is a sine wave. In reality, it does so for all the sinusoidal components of the input signal.
+                    </aside>
+                </section> -->
+                <section >
+                    <img src="fr4/shift-formula-adv.png" class="noborder" style="width:100%;"/>
+                    <aside class="notes">
+                        Why does mutiplying mean rotating the vectors back? Because of this.
+                    </aside>
+                    <!-- {A cdot e^{ j %alpha }}underbrace { binom "input"  "sample" } cdot {{e^{ j %beta } }underbrace binom "LO" "sample"} = {A cdot e^{ j (%alpha + %beta) } underbrace binom "output" "sample" } -->
+				</section>
+                <section >
+                    <div class="fragment fade-in" data-iframe="anim2" data-url="anims/shift-rotate/shift-rotate.html" style="position: relative; top: -50px; left: -150px;">
+                        <iframe src="about:blank" id="anim2" width="1400" height="1000"></iframe>
+                    </div>
+                    <aside class="notes">
+                        So let's see this visually. The blue is the local oscillator. The red is the input sample.
+                        It gets rotated by the LO's phase.
+                    </aside>
+				</section>
+                <section data-transition="fade-in">
+                    <img src="fr4/shift-alg-slide-1.png" class="noborder" style="width: 100%; position: relative; top: -50px; " />
+                    <aside class="notes">
+                        So how to code this? 
+                        We need to find out the phase change for the LO, which will depend on the sampling rate, the center frequency and the channel frequency.
+                    </aside>
+				</section>
+                <section data-transition="fade-in">
+                    <img src="fr4/shift-alg-slide-2.png" class="noborder" style="width: 100%; position: relative; top: -50px; " />
+                    <aside class="notes">
+                        We need to initialize the LO phase, and increase it for every sample.
+                        We need to find out the phase change for the LO, which will depend on the sampling rate, the center frequency and the channel frequency.
+                    </aside>
+				</section>
+                <section data-transition="fade-in" data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/4.json" speed="1" cols="80" font-size="20px" id="rec4"/>
+                    </div>
+                    <div class="fragment" data-rec="rec4" data-time="9" />
+                    <div class="fragment" data-rec="rec4" data-time="37" />
+                    <div class="fragment" data-rec="rec4" data-time="47" />
+                    <div class="fragment" data-rec="rec4" data-time="59" />
+                    <div class="fragment" data-rec="rec4" data-time="71" />
+                    <div class="fragment" data-rec="rec4" data-time="90" />
+                    <div class="fragment" data-rec="rec4" data-time="110" />
+                    <div class="fragment" data-rec="rec4" data-time="127" />
+                    <aside class="notes">
+                        We need to initialize the LO phase, and increase it for every sample.
+                        We need to find out the phase change for the LO, which will depend on the sampling rate, the center frequency and the channel frequency.
+                    </aside>
+				</section>
+				<section >
+                    <div class="fragment fade-in" data-iframe="anim1" data-url="anims/shift/shift.html">
+                        <iframe src="about:blank" id="anim1" width="700" height="400"></iframe>
+                    </div>
+                    <aside class="notes">
+                        If you do this in hardware on a real signal, e.g. in a superhet radio, then you have to worry about images. That's why we have an IF filter. 
+                        Do we have mirror images here? Nope. In DSP, if we do it this way, what goes out on one edge of the spectrum comes in from the other edge. 
+                        We won't go into theory now to understand it.
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/shift-test-gr-flowgraph.png" class="noborder" style="width: 120%; position: relative; top: -50px; " />
+                    <aside class="notes">
+                        So let's test that in GNU Radio against a GNU Radio block that does the same: the Frequency Xlating FIR filter.
+                        We set this block to do a shift and no filtering and no decimation.
+                        Let's see if both can shift a -31k signal down 30k. 
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/shift-test-gr-ui.png" class="noborder" style="width: 70%; position: relative; top: -50px; " />
+                    <aside class="notes">
+                        And yes, they can.
+                        We see some artifacts here because we convert from float to unsigned 8-bit and back. 
+                    </aside>
+				</section>
+				<section>
+                    <h1>Let's<br/>channelize!</h1>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/signalflow-channelize.png" class="noborder" style="width: 50%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        To select a single channel out of the signal bandwidth, we run a filter, which will be a Finite Impulse Response or FIR filter in this case.
+                        Then we can leave out some of the samples of this stream without worrying about overlapping other parts of the spectrum with our channel.
+                    </aside>
+				</section>
+				<section>
+                    <div class="fragment fade-in" data-iframe="anim4" data-url="anims/fir/fir.html" style="position: relative; top: -0px; left: 70px; ">
+                        <iframe src="about:blank" id="anim4" width="1000" height="1000"></iframe>
+                    </div>
+                    <aside class="notes">
+                        For the FIR filter, we have a vector of numbers (called taps or coefficients), with which we multiply together the set of last N samples of the signal, we sum up the result and that will be one output sample. Then we shift our input signal.
+                        In this case both the input samples and the taps are complex numbers, and the result is too.
+                    </aside>
+				</section>
+
+				<section>
+                    <img src="fr4/fir-decimate.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        Instead of calculating the output for each input and leaving out 3 out of 4 output samples to decimate, we can choose to shift by 4 each time.
+                        We save a lot of CPU time then.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/5.json" speed="1" cols="80" font-size="20px" id="rec5"/>
+                    </div>
+                    <div class="fragment" data-rec="rec5" data-time="19" />
+                    <div class="fragment" data-rec="rec5" data-time="29" />
+                    <div class="fragment" data-rec="rec5" data-time="32" />
+                    <div class="fragment" data-rec="rec5" data-time="45" />
+                    <div class="fragment" data-rec="rec5" data-time="64" />
+                    <div class="fragment" data-rec="rec5" data-time="117" />
+                    <div class="fragment" data-rec="rec5" data-time="165" />
+                    <div class="fragment" data-rec="rec5" data-time="173" />
+                    <div class="fragment" data-rec="rec5" data-time="197" />
+                    <div class="fragment" data-rec="rec5" data-time="228" />
+                    <div class="fragment" data-rec="rec5" data-time="265" />
+                    <div class="fragment" data-rec="rec5" data-time="278" />
+                    <aside class="notes">
+                        So let's code it. 
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <h1>decimate_taps = ?</h1>
+                    <aside class="notes">
+                        So this part is actually easy to implement. It's just a for cycle. 
+                        However, what should be the coefficients? 
+                        That's a bit thougher. 
+                        In this case I'm designing a real FIR filter and then make it complex and translate it up or down on the frequency scale if we need USB or LSB.
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/sinc-formula.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        Well, we know that from Fourier transform that the rectangular function in the frequency domain is inverse transformed into a sinc.
+                    </aside>
+                    <!--"sinc"(x) = {sin( x )} over x -->
+				</section>
+				<section>
+                    <img src="fr4/sinc.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/rect-formula.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/rect.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/taps-formula.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <h2>decimate_taps_length = ?</h2>
+                    <aside class="notes">
+                        How long should be this array?
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/taps-length-why.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        The longer it is, the larger will be the transition bandwidth of our filter.
+                        So the less sharp it will be.
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/taps-length-formula.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        We have a formula to calculate it from a given transition bandwidth.
+                    </aside>
+				</section>
+                <!--
+				<section>
+                    <img src="fr4/windows.png" class="noborder" style="width: 50%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                       What else do we need? Windows! I mean, not that. A window function.
+                    </aside>
+				</section>
+                -->
+				<section data-transition="fade-in">
+                    <img src="fr4/sincfilter-nowindow.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        As our filter is of finite length, we have to truncate this function, but it comes with undesirable side effects in the frequency domain (ripple in the passband and bad stopband attenuation).
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/sincfilter-hamming.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        We can solve it by applying a Hamming window on the filter taps.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/hamming-formula.png" class="noborder" style="width: 120%; position: relative; top: -37px; " />
+                    <aside class="notes">
+                        This is the formula for that window.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/fir-shift.png" class="noborder" style="width: 50%; position: relative; top: 0; " />
+                    <aside class="notes">
+                        It is also the case that we want to design different filters for SSB. To do that, we apply the same shift on the taps as we did for the signal.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/fir-shift-usb.png" class="noborder" style="width: 140%; position: relative;  " />
+                    <aside class="notes">
+                        So we do this to make a filter for USB.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/fir-shift-lsb.png" class="noborder" style="width: 140%; position: relative;  " />
+                    <aside class="notes">
+                        And we do this to make a filter for LSB.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/6.json" speed="1" cols="80" font-size="20px" id="rec6"/>
+                    </div>
+                    <div class="fragment" data-rec="rec6" data-time="7" />
+                    <div class="fragment" data-rec="rec6" data-time="40" />
+                    <div class="fragment" data-rec="rec6" data-time="73" />
+                    <div class="fragment" data-rec="rec6" data-time="84" />
+                    <div class="fragment" data-rec="rec6" data-time="107" />
+                    <div class="fragment" data-rec="rec6" data-time="143" />
+                    <div class="fragment" data-rec="rec6" data-time="164" />
+                    <div class="fragment" data-rec="rec6" data-time="235" />
+                    <div class="fragment" data-rec="rec6" data-time="274" />
+                    <div class="fragment" data-rec="rec6" data-time="313" />
+                    <div class="fragment" data-rec="rec6" data-time="354" />
+                    <div class="fragment" data-rec="rec6" data-time="366" />
+                    <div class="fragment" data-rec="rec6" data-time="380" />
+                    <div class="fragment" data-rec="rec6" data-time="384" />
+                    <div class="fragment" data-rec="rec6" data-time="490" />
+                    <div class="fragment" data-rec="rec6" data-time="519" />
+                    <div class="fragment" data-rec="rec6" data-time="536" />
+                    <div class="fragment" data-rec="rec6" data-time="658" />
+                    <aside class="notes">
+                        So let's write the code for that!
+                    </aside>
+				</section>
+				<!--<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/7.json" speed="1" cols="80" font-size="20px" id="rec7" />
+                    </div>
+                    <div class="fragment" data-rec="rec7" data-play="true" />
+                    <aside class="notes">
+                        As seen, our program generates a test.m file with the coefficients, if we run it. 
+                        This can be fed into octave. 
+                    </aside>
+                </section>-->
+				<section data-background="bglake.jpg" data-transition="fade-in">
+                    <img src="fr4/octave-filter-1.png" class="noborder" style="width: 90%; position: relative; top: -54px;"/>
+                    <aside class="notes">
+                        This is the result in Octave.
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg" data-transition="fade-in">
+                    <img src="fr4/octave-filter-2.png" class="noborder" style="width: 90%; position: relative; top: -54px;"/>
+                    <aside class="notes">
+                        Unfortunately, we need to swap the two sides of the spectrum to get the real meaning.
+                        This could have been done in Octave, but I did it in the image editor here, for which sorry.
+                        So here we can actually see that this is a filter for LSB.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <img src="fr4/ddc-test-flowgraph.png" class="noborder" style="width: 100%; position: relative; top: -54px;"/>
+                    <aside class="notes">
+                        Now let's check that in GNU Radio.
+                        I've built a test flowgraph for it.
+                    </aside>
+				</section>
+				<section>
+					<video controls style="width: 70%; position: relative; top: -34px;">
+						<source data-src="video/gnuradio-ddc.ogv" type="video/ogg" />
+					</video>
+                    <aside class="notes">
+                        So what we can see here is that it works the same way as the corresponding GNU Radio block. 
+                        It passes the signal in the passband and rejects it outside the passband.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <h3>AM/FM</h3>
+                    <img src="fr4/gnuradio-ddc-fm.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                        We can also verify the filter characteristics by feeding smallrx with noise.
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <h3>LSB</h3>
+                    <img src="fr4/gnuradio-ddc-lsb.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <h3>USB</h3>
+                    <img src="fr4/gnuradio-ddc-usb.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-transition="fade-in">
+                    <h1>Let's<br />demod!</h1>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/sam.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">                    </aside>
+                    <!-- s_AM = abs{ A e^{j%phi} } = A -->
+				</section>
+				<section>
+                    <img src="fr4/sssb.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                        To SSB demodulate, in case we removed all components from the other side of the spectrum, we project the sample to a line that reaches the center. It can practically be the x or the y axis, so taking the real or the imaginary part would work.
+                    </aside>
+                    <!-- s_SSB = "Re"({ A e^{j%phi} }) -->
+				</section>
+				<section>
+                    <img src="fr4/sssb-formula-2.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+                    <!-- alignc "Re"( e^{j %omega t} ) = cos( %omega t ) newline
+                    "Re"( e^{j %omega t} + e^{- 2 j %omega t} ) = cos( %omega t ) + cos(-2 %omega t)  newline -->
+				</section>
+				<section>
+                    <img src="fr4/sssb-comment-2.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                        It is imporant to emphasize that this only works if you have a filter with complex taps and you removed everything from the other side of the spectrum.
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/sssb-comment.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                        So this is another image on what happens here.
+                    </aside>
+				</section>
+				<!--<section>
+                    <img src="fr4/sssb-comment-3.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+                </section>-->
+				<section>
+                    <img src="fr4/sfm.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+                    <!-- s_FM = partial over {partial t} "arg"({ A e^{j%phi} }) = {partial %phi} over {partial t} -->
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/8.json" speed="2" cols="80" font-size="20px" id="rec8" />
+                    </div>                    
+                    <div class="fragment" data-rec="rec8" data-time="10" />
+                    <div class="fragment" data-rec="rec8" data-time="21" />
+                    <div class="fragment" data-rec="rec8" data-time="34" />
+                    <div class="fragment" data-rec="rec8" data-time="45" />
+                    <div class="fragment" data-rec="rec8" data-time="58" />
+                    <div class="fragment" data-rec="rec8" data-time="66" />
+                    <div class="fragment" data-rec="rec8" data-time="76" />
+                    <div class="fragment" data-rec="rec8" data-time="82" />
+                    <div class="fragment" data-rec="rec8" data-time="88" />
+                    <div class="fragment" data-rec="rec8" data-time="115" />
+                    <div class="fragment" data-rec="rec8" data-time="124" />
+                    <div class="fragment" data-rec="rec8" data-time="140" />
+                    <div class="fragment" data-rec="rec8" data-time="164" />
+                    <div class="fragment" data-rec="rec8" data-time="178" />
+                    <div class="fragment" data-rec="rec8" data-time="192" />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <h1>Yay!<br>We're ready!</h1>
+				</section>
+				<section data-background="bglake.jpg">
+                    <div style="position: relative; top: -70px;">
+                        <asciinema-player src="rec/9.json" speed="1.5" cols="80" font-size="20px" id="rec9" />
+                    </div>                    
+                    <div class="fragment" data-rec="rec9" data-play="true" />
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+					<video controls style="width: 100%; position: relative; top: -34px;">
+						<source data-src="video/fm-test.ogv" type="video/ogg" />
+					</video>         
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+                    <img src="fr4/gnuradio-ssb.png" class="noborder" style="width: 100%; "/>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section data-background="bglake.jpg">
+					<video controls style="width: 40%; position: relative; top: -34px;">
+						<source data-src="video/ssb-test.ogv" type="video/ogg" />
+					</video>         
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section >
+                    <h1>AGC=?</h1>
+                    <aside class="notes">
+                    </aside>
+				</section>
+				<section>
+                    <img src="fr4/gnuradio-agc.png" class="noborder" style="width: 30%; "/> <br /><br />
+                    <a href="http://www.ece.uvic.ca/~elec350/grc_doc/ar01s01s01.html">http://www.ece.uvic.ca/~elec350/grc_doc/ar01s01s01.html</a>
+                    <aside class="notes">
+                    </aside>
+				</section>
+                <section data-background="bglake.jpg">
+                    <h1>Thanks:</h1>
+                    <h2>Zsolt Krüpl, HG2ECZ</h2> 
+                    <h2>Ádám Kiss, HA8KDA</h2> 
+                    <h2>Dr János Selmeczi, HA5FT</h2>
+                    <aside class="notes">
+                    </aside>
+                </section>
+				<section data-transition="fade-in">
+                    <h2>SMALLRX</h2>
+                    <div class="fragment grow">
+                        <a href="http://github.com/ha7ilm/smallrx">http://github.com/ha7ilm/smallrx</a>
+                    </div>
+                    <aside class="notes">
+						That's all I wanted to show today. You can find more about this work on my website.
+                    </aside>
+				</section>
+			</div>
+
+		</div>
+
+
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+		var slideTimeMap =
+		[
+		  	{ time: 0,   slide: [0, 0,-1]  },
+		  	{ time: 32,  slide: [1, 0,-1]  },
+		  	{ time: 78,  slide: [2, 0,-1]  },
+		  	{ time: 82,  slide: [2, 0, 0]  },
+		  	{ time: 84,  slide: [2, 0, 1]  },
+		  	{ time: 94,  slide: [3, 0, -1] },
+		  	{ time: 115, slide: [4, 0, -1] },
+		  	{ time: 127, slide: [5, 0, -1] },
+		  	{ time: 136, slide: [6, 0, -1] },
+		  	{ time: 141, slide: [7, 0, -1] },
+		  	{ time: 173, slide: [8, 0, -1] },
+		  	{ time: 190, slide: [9, 0, -1] },
+		  	{ time: 199, slide: [10, 0, -1] },
+		  	{ time: 206, slide: [11, 0, -1] },
+		  	{ time: 210, slide: [12, 0, -1] },
+		  	{ time: 213, slide: [13, 0, -1] },
+		  	{ time: 215, slide: [14, 0, -1] },
+		  	{ time: 224, slide: [15, 0, -1] },
+		  	{ time: 237, slide: [16, 0, -1] },
+		  	{ time: 243, slide: [17, 0, -1] },
+		  	{ time: 260, slide: [18, 0, -1] },
+		  	{ time: 268, slide: [19, 0, -1] },
+		  	{ time: 276, slide: [20, 0, -1] },
+		  	{ time: 351.33-0.5, slide: [ 21,0,-1] },
+		  	{ time: 358.34-0.5, slide: [ 22,0,-1] },
+		  	{ time: 360.33-0.5, slide: [ 23,0,-1] },
+		  	{ time: 362.34-0.5, slide: [ 24,0,-1] },
+		  	{ time: 370.08-0.5, slide: [ 25,0,-1] },
+		  	{ time: 375.08-0.5, slide: [ 26,0,-1] },
+		  	{ time: 407.08-0.5, slide: [ 27,0,-1] },
+		  	{ time: 417.08-0.5, slide: [ 28,0,-1] },
+		  	{ time: 422.01-0.5, slide: [ 28,0,-1] },
+		  	{ time: 437.02-0.5, slide: [ 29,0,-1] },
+		  	{ time: 439.00-0.5, slide: [ 30,0,-1] },
+		  	{ time: 440.02-0.5, slide: [ 30,0,-1] },
+		  	{ time: 441.00-0.5, slide: [ 34,0,-1] },
+		  	{ time: 450.01-0.5, slide: [ 35,0,-1] },
+			{ time: 464.96, slide: [ 36, 0, -1] },
+			{ time: 492.18, slide: [ 37, 0, -1] },
+			{ time: 492.54, slide: [ 38, 0, -1] },
+			{ time: 497.00, slide: [ 39, 0, -1] },
+			{ time: 504.09, slide: [ 40, 0, -1] },
+			{ time: 523.42, slide: [ 41, 0, -1] },
+			{ time: 533.51, slide: [ 42, 0, -1] },
+			{ time: 541.20, slide: [ 43, 0, -1] },
+			{ time: 556.08, slide: [ 44, 0, -1] },
+			{ time: 559.30, slide: [ 45, 0, -1] },
+			{ time: 561.00, slide: [ 46, 0, -1] },
+			{ time: 562.05, slide: [ 47, 0, -1] },
+			{ time: 564.07, slide: [ 48, 0, -1] },
+			{ time: 566.29, slide: [ 49, 0, -1] },
+			{ time: 569.43, slide: [ 50, 0, -1] },
+			{ time: 575.80, slide: [ 51, 0, -1] },
+			{ time: 579.47, slide: [ 52, 0, -1] },
+			{ time: 582.40, slide: [ 53, 0, -1] },
+			{ time: 583.35, slide: [ 54, 0, -1] },
+			{ time: 585.14, slide: [ 55, 0, -1] },
+			{ time: 586.19, slide: [ 56, 0, -1] },
+			{ time: 596.75, slide: [ 57, 0, -1] },
+			{ time: 601.67, slide: [ 58, 0, -1] },
+			{ time: 603.45, slide: [ 59, 0, -1] },
+			{ time: 605.51, slide: [ 60, 0, -1] },
+			{ time: 606.93, slide: [ 61, 0, -1] },
+			{ time: 608.04, slide: [ 62, 0, -1] },
+			{ time: 608.97, slide: [ 63, 0, -1] },
+			{ time: 610.04, slide: [ 64, 0, -1] },
+			{ time: 610.85, slide: [ 65, 0, -1] },
+			{ time: 613.82, slide: [ 66, 0, -1] },
+			{ time: 615.76, slide: [ 67, 0, -1] },
+			{ time: 622.79, slide: [ 68, 0, -1] },
+			{ time: 623.65, slide: [ 69, 0, -1] },
+			{ time: 626.04, slide: [ 70, 0, -1] },
+			{ time: 628.61, slide: [ 71, 0, -1] },
+			{ time: 630.06, slide: [ 72, 0, -1] },
+			{ time: 631.49, slide: [ 73, 0, -1] },
+			{ time: 632.82, slide: [ 74, 0, -1] },
+			{ time: 662.22, slide: [ 75, 0, -1] },
+			{ time: 667.08, slide: [ 76, 0, -1] },
+			{ time: 671.02, slide: [ 77, 0, -1] },
+			{ time: 672.60, slide: [ 78, 0, -1] },
+			{ time: 676.47, slide: [ 79, 0, -1] },
+			{ time: 681.22, slide: [ 80, 0, -1] },
+			{ time: 682.83, slide: [ 81, 0, -1] },
+			{ time: 695.18, slide: [ 82, 0, -1] },
+			{ time: 724.85, slide: [ 83, 0, -1] },
+			{ time: 743.16, slide: [ 84, 0, -1] },
+			{ time: 748.45, slide: [ 85, 0, -1] },
+			{ time: 752.37, slide: [ 85, 0, 0] },
+			{ time: 753.17, slide: [ 85, 0, 1] },
+			{ time: 755.65, slide: [ 86, 0, -1] },
+			{ time: 761.93, slide: [ 87, 0, -1] },
+			{ time: 797.74, slide: [ 88, 0, -1] },
+			{ time: 832.37, slide: [ 88, 0, 0] },
+			{ time: 835.41, slide: [ 89, 0, -1] },
+			{ time: 850.36, slide: [ 90, 0, -1] },
+			{ time: 859.50, slide: [ 91, 0, -1] },
+			{ time: 865.32, slide: [ 92, 0, -1] },
+			{ time: 876.52, slide: [ 93, 0, -1] },
+			{ time: 878.57, slide: [ 94, 0, -1] },
+			{ time: 895.93, slide: [ 95, 0, -1] },
+			{ time: 914.04, slide: [ 96, 0, -1] },
+			{ time: 936.31, slide: [ 97, 0, -1] },
+			{ time: 948.58, slide: [ 98, 0, -1] },
+			{ time: 959.58, slide: [ 99, 0, -1] },
+			{ time: 967.49, slide: [ 100, 0, -1] },
+			{ time: 981.42, slide: [ 101, 0, -1] }
+		];
+
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				zoomKey: 'ctrl',
+				viewDistance: 10,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+                /*
+				talkVideo:
+				{
+					animateOnStart: true,
+					slideTimeMap: slideTimeMap,
+					youtubeVideoId: 'fgFto-Oj-uw',
+					playerWidth: 300,
+					playerHeight: 168,
+					playerAutoStart: true,
+					playerAutoStartOnlyOnFirstSlide: true
+				},
+                */
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true },
+					//{ src: 'plugin/talkvideo/talkvideo.js' }
+				]
+
+
+			});
+
+        var fragmentEvent = function( event ) {
+            if($(event.fragment).attr("data-rec")) {
+                var item = $("#"+event.fragment.dataset.rec)[0]
+                if($(event.fragment).attr("data-play")) {
+                    item.play()
+                    item.currentTime = 0
+                }
+                else {
+                    item.play()
+                    item.pause()
+                    item.currentTime = event.fragment.dataset.time
+                }
+            }
+            else if($(event.fragment).attr("data-iframe")) {
+                var item = $("#"+event.fragment.dataset.iframe)[0]
+                item.src=event.fragment.dataset.url
+            }
+
+        }
+        Reveal.addEventListener( 'fragmentshown', fragmentEvent );
+        Reveal.addEventListener( 'fragmenthidden', fragmentEvent );
+		</script>
+		<script src="js/jquery-1.11.3.min.js"></script>
+		<script>
+			Reveal.addEventListener( 'ready', function( event ) {
+				$("*[data-smallcaps]").each(function(x,y){
+					$(y).html( $(y).text().replace(/[A-Z]+/g,function(x){return "<span style='font-size: 125%;'>"+x+"</span>";} ));
+				});
+			} );
+
+			$("video").click(function(e){
+			    this.currentTime = 0; this.play(); console.log("video::clicked");
+			});
+
+		</script>
+		<style>
+		.reveal-talkvideo iframe {
+			position: fixed;
+			left: 15px;
+			bottom: 15px;
+		}
+		</style>
+		<div class="reveal-talkvideo">
+			<div id="reveal-talkvideo-player"></div>
+		</div>
+
+<script>
+
+</script>
+
+
+	</body>
+</html>
